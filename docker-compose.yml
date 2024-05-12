@@ -1,0 +1,33 @@
+version: '3.1'
+
+services:
+  springboot:
+    image: uptimecareer/spring-boot-mongo:1
+    environment:
+    - MONGO_DB_HOSTNAME=mongo
+    - MONGO_DB_USERNAME=devdb
+    - MONGO_DB_PASSWORD=devdb123
+    ports:
+      - 8080:8080
+    depends_on:
+      - mongo
+    networks:
+    - springappnetwork
+
+  mongo:
+    image: mongo
+    environment:
+    - MONGO_INITDB_ROOT_USERNAME=devdb
+    - MONGO_INITDB_ROOT_PASSWORD=devdb123
+    volumes:
+      - mongodbvol:/data/db
+    restart: always
+    networks:
+    - springappnetwork
+
+volumes:
+  mongodbvol:
+
+networks:
+  springappnetwork:
+    driver: bridge
