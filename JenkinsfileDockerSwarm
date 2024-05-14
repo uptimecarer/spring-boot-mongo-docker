@@ -1,8 +1,9 @@
 node{
- stage("Git CheckOut"){
-        git credentialsId: '4f117449-99ad-48dc-9bc4-b633a192f9a8', url: 'https://github.com/uptimecareer/spring-boot-mongo-docker.git'
-    }    
- stage(" Maven Clean Package"){
+    
+    stage("git clone"){
+        git credentialsId: 'Git_Cred', url: 'https://github.com/uptimecareer/spring-boot-mongo-docker.git'
+    }
+    stage("Maven Clean Package"){
       def mavenHome =  tool name: "Maven-3.9.6", type: "maven"
       def mavenCMD = "${mavenHome}/bin/mvn"
       sh "${mavenCMD} clean package"
@@ -10,21 +11,21 @@ node{
  stage("Build Dokcer Image") {
          sh "docker build -t uptimecareer/spring-boot-mongo:latest ."
     }
- stage("Docker Push"){
+  stage("Docker Push"){
         withCredentials([string(credentialsId: 'Docker_Hub_Pwd', variable: 'Docker_Hub_Pwd')]) {
           sh "docker login -u uptimecareer -p ${Docker_Hub_Pwd}"
         }
         sh "docker push uptimecareer/spring-boot-mongo:latest"
         
     }  
-   stage("Remove Local Image"){
+    stage("Remove Local Image"){
         sh "docker rmi -f uptimecareer/spring-boot-mongo:latest"
-    }   
+    }
    stage("Deploy to docker swarm cluster"){
-        sshagent(['91984498-1418-449b-b135-24252fb90122']) {
-		    sh 'scp -o StrictHostKeyChecking=no  docker-composeswarm.yml ec2-user@52.87.216.32:'
-		    //sh 'ssh -o StrictHostKeyChecking=no ec2-user@52.87.216.32 docker stack rm springboot'
-                    sh 'ssh -o StrictHostKeyChecking=no ec2-user@52.87.216.32 docker stack deploy --prune --compose-file docker-composeswarm.yml springboot'
+        sshagent(['host_cred']){
+		    sh 'scp -o StrictHostKeyChecking=no  docker-composeswarm.yml ec2-user@3.94.181.153:'
+		    //sh 'ssh -o StrictHostKeyChecking=no ec2-user@3.94.181.153 docker stack rm springboot'
+                    sh 'ssh -o StrictHostKeyChecking=no ec2-user@3.94.181.153 docker stack deploy --prune --compose-file docker-composeswarm.yml springboot'
         }
-    }    
+    }     
 }
