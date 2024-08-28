@@ -1,31 +1,28 @@
 node{
-    
-    stage("git clone"){
-        git credentialsId: 'Git_Cred', url: 'https://github.com/uptimecareer/spring-boot-mongo-docker.git'
+  stage('checkout'){
+    git changelog: false, credentialsId: 'github_cred', poll: false, url: 'https://github.com/uptimecareer/spring-boot-mongo-docker.git'  
+  }
+  stage('build artifact'){
+      def mavenHome = tool name: "maven-3.9.9", type: "maven"
+      sh "${mavenHome}/bin/mvn clean package"
+  }
+  stage('Create Image'){
+      sh "docker build -t uptimecareer/spring-boot-mongo:latest ."
+  }
+  stage('Docker Login and Push Image'){
+      withCredentials([string(credentialsId: 'docker_hub_pwd', variable: 'docker_hub_pwd')]) {
+      sh "docker login -u uptimecareer -p ${docker_hub_pwd}" 
     }
-    stage("Maven Clean Package"){
-      def mavenHome =  tool name: "Maven-3.9.6", type: "maven"
-      def mavenCMD = "${mavenHome}/bin/mvn"
-      sh "${mavenCMD} clean package"
-    }     
- stage("Build Dokcer Image") {
-         sh "docker build -t uptimecareer/spring-boot-mongo:latest ."
-    }
-  stage("Docker Push"){
-        withCredentials([string(credentialsId: 'Docker_Hub_Pwd', variable: 'Docker_Hub_Pwd')]) {
-          sh "docker login -u uptimecareer -p ${Docker_Hub_Pwd}"
-        }
-        sh "docker push uptimecareer/spring-boot-mongo:latest"
-        
-    }  
-    stage("Remove Local Image"){
-        sh "docker rmi -f uptimecareer/spring-boot-mongo:latest"
-    }
-   stage("Deploy to docker swarm cluster"){
-        sshagent(['host_cred']){
-		    sh 'scp -o StrictHostKeyChecking=no  docker-composeswarm.yml ec2-user@3.94.181.153:'
-		    //sh 'ssh -o StrictHostKeyChecking=no ec2-user@3.94.181.153 docker stack rm springboot'
-                    sh 'ssh -o StrictHostKeyChecking=no ec2-user@3.94.181.153 docker stack deploy --prune --compose-file docker-composeswarm.yml springboot'
-        }
-    }     
+      sh "docker push uptimecareer/spring-boot-mongo:latest"
+   }
+ stage('Remove Local Image'){
+      sh "docker rmi -f uptimecareer/spring-boot-mongo:latest"
+  } 
+  stage('Deploy Image to Swarm Cluster'){
+    sshagent(['swarm_manager_cred']) {
+      sh 'scp -o StrictHostKeyChecking=no docker-composeswarm.yml ec2-user@18.220.20.80:'
+      sh 'ssh -o StrictHostKeyChecking=no ec2-user@18.220.20.80 docker stack deploy --prune --compose-file docker-composeswarm.yml springboot'
+}  
+      
+  }
 }
